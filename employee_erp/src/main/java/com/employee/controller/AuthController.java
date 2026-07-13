@@ -5,7 +5,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,9 +28,6 @@ public class AuthController {
 	
 	@Autowired
 	private UserService userService;
-	
-	@Autowired
-	private PasswordEncoder passwordEncoder;
 	
 	@Autowired
 	private JwtService jwtService;
@@ -58,44 +54,60 @@ public class AuthController {
 
 	    User user = userService.findByUsername(request.getUsername());
 
-	    String accessToken = jwtService.generateAccessToken(user.getUsername(),user.getRole());
+	    refreshTokenService.findByUser(user)
+	            .ifPresent(refreshTokenService::delete);
 
-	    RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
-	    return ResponseEntity.ok(new AuthResponse(accessToken,refreshToken.getToken()));
+	    RefreshToken refreshToken =
+	            refreshTokenService.createRefreshToken(user);
+
+	    String accessToken = jwtService.generateAccessToken(
+	            user.getUsername(),
+	            user.getRole());
+
+	    return ResponseEntity.ok(
+	            new AuthResponse(
+	                    accessToken,
+	                    refreshToken.getToken()));
 	}
 	
 	@PostMapping("/refresh")
 	public ResponseEntity<RefreshTokenResponse> refreshToken(
 	        @RequestBody RefreshTokenRequest request) {
 
-	    RefreshToken refreshToken =
-	            refreshTokenService
-	                    .findByToken(request.getRefreshToken())
-	                    .orElseThrow(() ->
-	                            new RuntimeException("Refresh Token Not Found"));
+	    RefreshToken refreshToken = refreshTokenService
+	            .findByToken(request.getRefreshToken())
+	            .orElseThrow(() ->
+	                    new RuntimeException("Refresh Token Not Found"));
 
 	    refreshTokenService.verifyExpiration(refreshToken);
 
-	    User user = refreshToken.getUser();
+	    RefreshToken newRefreshToken =
+	            refreshTokenService.rotateRefreshToken(refreshToken);
 
-	    String accessToken =
-	            jwtService.generateAccessToken(
-	                    user.getUsername(),
-	                    user.getRole());
+	    User user = newRefreshToken.getUser();
+
+	    String accessToken = jwtService.generateAccessToken(
+	            user.getUsername(),
+	            user.getRole());
 
 	    return ResponseEntity.ok(
-	            new RefreshTokenResponse(accessToken));
+	            new RefreshTokenResponse(
+	                    accessToken,
+	                    newRefreshToken.getToken()));
 	}
 	
 	@PostMapping("/logout")
 	public ResponseEntity<String> logout(
 	        @RequestBody LogoutRequest request) {
 
-	    User user =
-	            userService.findByUsername(
-	                    request.getUsername());
+	    User user = userService.findByUsername(request.getUsername());
 
-	    refreshTokenService.deleteByUser(user);
+	    RefreshToken refreshToken = refreshTokenService
+	            .findByUser(user)
+	            .orElseThrow(() ->
+	                    new RuntimeException("Refresh Token Not Found"));
+
+	    refreshTokenService.delete(refreshToken);
 
 	    return ResponseEntity.ok("Logout Successful");
 	}

@@ -13,6 +13,8 @@ import com.employee.entity.User;
 import com.employee.repo.RefreshTokenRepository;
 import com.employee.service.RefreshTokenService;
 
+import jakarta.transaction.Transactional;
+
 @Service
 public class RefreshTokenServiceImpl implements RefreshTokenService {
 	
@@ -50,8 +52,24 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 	}
 
 	@Override
-	public void deleteByUser(User user) {
-		refreshTokenRepository.deleteByUser(user);
+	public void delete(RefreshToken refreshToken) {
+	    refreshTokenRepository.delete(refreshToken);
+	}
+	
+	@Override
+	public Optional<RefreshToken> findByUser(User user) {
+	    return refreshTokenRepository.findByUser(user);
+	}
+	
+	@Override
+	@Transactional
+	public RefreshToken rotateRefreshToken(RefreshToken oldToken) {
+
+	    User user = oldToken.getUser();
+
+	    refreshTokenRepository.delete(oldToken);
+
+	    return createRefreshToken(user);
 	}
 
 }

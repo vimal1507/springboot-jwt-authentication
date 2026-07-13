@@ -12,7 +12,11 @@ public interface RefreshTokenService {
     Optional<RefreshToken> findByToken(String token);
 
     RefreshToken verifyExpiration(RefreshToken token);
+    
+    void delete(RefreshToken refreshToken);
+    
+    Optional<RefreshToken> findByUser(User user);
 
-    void deleteByUser(User user);
+    RefreshToken rotateRefreshToken(RefreshToken oldToken);
 
 }
