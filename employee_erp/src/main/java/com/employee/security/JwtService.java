@@ -26,7 +26,7 @@ public class JwtService {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 	
-	public String generateToken(String username, String role) {
+	public String generateAccessToken(String username, String role) {
 
 	    return Jwts.builder()
 	            .subject(username)
