@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.employee.entity.RefreshToken;
 import com.employee.entity.User;
+import com.employee.exception.RefreshTokenExpiredException;
 import com.employee.repo.RefreshTokenRepository;
 import com.employee.service.RefreshTokenService;
 
@@ -44,7 +45,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
 	        refreshTokenRepository.delete(token);
 
-	        throw new RuntimeException(
+	        throw new RefreshTokenExpiredException(
 	                "Refresh Token Expired. Please login again.");
 	    }
 
